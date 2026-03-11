@@ -84,13 +84,6 @@ function isNodeRuntime(): boolean {
   return typeof process !== "undefined" && !!(process as any).versions?.node;
 }
 
-// Simple helper for required envs when we really need them
-function getRequiredEnv(name: string): string {
-  const value = process.env[name];
-  if (!value || !value.trim()) throw new Error(`Missing required env var: ${name}`);
-  return value.trim();
-}
-
 // Send OTP email via Brevo HTTP API (falls back to console log if not configured)
 // Using HTTPS avoids SMTP port blocking on Render and similar hosts.
 export async function sendOTPEmail(email: string, otp: string, studentName: string): Promise<void> {
