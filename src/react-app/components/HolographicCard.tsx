@@ -17,6 +17,7 @@ interface CertificateData {
   internshipDomain?: string;
   internshipStartDate?: string;
   internshipEndDate?: string;
+  verifiedAt?: string; // ISO timestamp when certificate was verified via OTP
 }
 
 interface HolographicCardProps {
