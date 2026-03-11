@@ -1,10 +1,18 @@
 import type { ApiResponse, LoginRequest, LoginResponse, Certificate, CertificateCreate } from "@/shared/types";
 import type { User } from "@/lib/models";
 
-// default to the deployed backend; override with VITE_API_BASE if available
+// Build the API base URL.
+// - In production (Vercel), we normally call `/api/*` on the same origin and use `vercel.json` rewrites
+//   to forward to the actual backend (Render).
+// - In development, you can set `VITE_API_BASE` (e.g. `http://localhost:8787`) to talk directly to the dev server.
+const defaultBase =
+  typeof window !== "undefined" && window.location?.origin
+    ? window.location.origin
+    : "";
+
 // NOTE: all server routes live under /api, so ensure the base url ends with /api
 const API_BASE =
-  (import.meta.env.VITE_API_BASE || "https://verivault.onrender.com").replace(/\/+$/g, "") + "/api";
+  (import.meta.env.VITE_API_BASE || defaultBase).replace(/\/+$/g, "") + "/api";
 
 if (typeof window !== "undefined") {
   console.log("[API] base url =", API_BASE);

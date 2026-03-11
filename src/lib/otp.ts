@@ -84,37 +84,15 @@ function isNodeRuntime(): boolean {
   return typeof process !== "undefined" && !!(process as any).versions?.node;
 }
 
+// Simple helper for required envs when we really need them
 function getRequiredEnv(name: string): string {
   const value = process.env[name];
   if (!value || !value.trim()) throw new Error(`Missing required env var: ${name}`);
   return value.trim();
 }
 
-let cachedTransporter: any | null = null;
-
-async function getSmtpTransporter() {
-  if (cachedTransporter) return cachedTransporter;
-
-  const host = getRequiredEnv("BREVO_SMTP_HOST");
-  const port = Number(getRequiredEnv("BREVO_SMTP_PORT"));
-  const user = getRequiredEnv("BREVO_SMTP_USER");
-  const pass = getRequiredEnv("BREVO_SMTP_PASS");
-
-  // Nodemailer is CommonJS; dynamic import keeps non-Node builds safer.
-  const mod: any = await import("nodemailer");
-  const nodemailer = mod?.default ?? mod;
-
-  cachedTransporter = nodemailer.createTransport({
-    host,
-    port,
-    secure: port === 465,
-    auth: { user, pass },
-  });
-
-  return cachedTransporter;
-}
-
-// Send OTP email via Brevo SMTP (falls back to console log if not configured)
+// Send OTP email via Brevo HTTP API (falls back to console log if not configured)
+// Using HTTPS avoids SMTP port blocking on Render and similar hosts.
 export async function sendOTPEmail(email: string, otp: string, studentName: string): Promise<void> {
   const subject = "VeriVault Certificate Verification OTP";
   const text = `Hello ${studentName},
@@ -127,34 +105,54 @@ Regards,
 VeriVault Team
 `;
 
-  // If SMTP isn't configured (or we're not in Node), keep the existing dev behavior.
-  const smtpConfigured =
-    !!process.env.BREVO_SMTP_HOST &&
-    !!process.env.BREVO_SMTP_PORT &&
-    !!process.env.BREVO_SMTP_USER &&
-    !!process.env.BREVO_SMTP_PASS &&
-    !!process.env.FROM_EMAIL;
+  const apiKey =
+    process.env.BREVO_API_KEY?.trim() ||
+    process.env.BREVO_SMTP_USER?.trim(); // Brevo often reuses the same key
+  const from = process.env.FROM_EMAIL?.trim();
 
-  if (!smtpConfigured || !isNodeRuntime()) {
+  if (!apiKey || !from || !isNodeRuntime() || !(globalThis as any).fetch) {
+    // Fallback for local/dev or misconfigured environments.
     console.log(`\n📧 OTP Email (dev fallback) to ${email}:`);
     console.log(`   Subject: ${subject}`);
     console.log(`   Body: ${text}`);
     return;
   }
 
-  const from = getRequiredEnv("FROM_EMAIL");
-  const transporter = await getSmtpTransporter();
+  const fetchFn: any = (globalThis as any).fetch;
 
-  await transporter.sendMail({
-    from: `VeriVault <${from}>`,
-    to: email,
+  const payload = {
+    sender: {
+      email: from,
+      name: "VeriVault",
+    },
+    to: [
+      {
+        email,
+        name: studentName,
+      },
+    ],
     subject,
-    text,
-    html: `<p>Hello ${studentName},</p>
+    textContent: text,
+    htmlContent: `<p>Hello ${studentName},</p>
 <p>Your OTP for certificate verification is: <strong>${otp}</strong></p>
 <p>This OTP is valid for 10 minutes.</p>
 <p>Regards,<br/>VeriVault Team</p>`,
+  };
+
+  const res = await fetchFn("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "api-key": apiKey,
+    },
+    body: JSON.stringify(payload),
   });
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    console.error("Brevo API error:", res.status, body);
+    throw new Error("Failed to send OTP email");
+  }
 
   if (process.env.NODE_ENV !== "production") {
     console.log(`✓ OTP email sent to ${email}`);
