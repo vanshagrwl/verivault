@@ -596,10 +596,20 @@ export default function HolographicCard({ certificate, isAdmin = false }: Hologr
     const widthPx = canvas.width;
     const heightPx = canvas.height;
 
-    // convert pixels to millimetres for better sizing in PDF viewers
-    const pxToMm = (px: number) => (px * 25.4) / 96; // assuming 96dpi
-    const widthMm = pxToMm(widthPx);
-    const heightMm = pxToMm(heightPx);
+    // convert pixels to millimetres using a higher DPI so the certificate
+    // fills a reasonable physical size. 96dpi yields very small documents on
+    // phones because screen canvases are narrow; using 150 or 300 dpi makes the
+    // PDF larger and the viewer will then scale it down, preventing the text
+    // from appearing cut off. 300 dpi is a good trade‑off for clarity.
+    const dpi = 300;
+    const pxToMm = (px: number) => (px * 25.4) / dpi;
+    let widthMm = pxToMm(widthPx);
+    let heightMm = pxToMm(heightPx);
+
+    // enforce a minimum page dimension (e.g. A5) to avoid extremely small files
+    const minMm = 100;
+    if (widthMm < minMm) widthMm = minMm;
+    if (heightMm < minMm) heightMm = minMm;
 
     const pdf = new jsPDF({
       orientation: widthMm >= heightMm ? "landscape" : "portrait",
