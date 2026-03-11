@@ -2,9 +2,9 @@ import type { ApiResponse, LoginRequest, LoginResponse, Certificate, Certificate
 import type { User } from "@/lib/models";
 
 // default to the deployed backend; override with VITE_API_BASE if available
+// NOTE: all server routes live under /api, so ensure the base url ends with /api
 const API_BASE =
-  import.meta.env.VITE_API_BASE ||
-  "https://verivault.onrender.com"; // change this if your render URL differs
+  (import.meta.env.VITE_API_BASE || "https://verivault.onrender.com").replace(/\/+$/g, "") + "/api";
 
 if (typeof window !== "undefined") {
   console.log("[API] base url =", API_BASE);
