@@ -64,6 +64,7 @@ async function initializeDatabase() {
     }
     console.log(`✓ Certificate ID migration complete\n`);
   }
+  const adminEmail = (process.env.ADMIN_EMAIL || "admin@verivault.com").toLowerCase();
   const adminPassword = process.env.ADMIN_PASSWORD || "admin123";
 
   const existingAdmin = await findAdminByEmail(adminEmail);
