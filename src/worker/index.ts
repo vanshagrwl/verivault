@@ -181,10 +181,12 @@ async function createSession(c: any, type: SessionType, email: string) {
   const expiresAt = new Date(now.getTime() + SESSION_TTL_SECONDS * 1000);
   await sessions.insertOne({ tokenHash, type, email: email.toLowerCase(), createdAt: now, expiresAt });
 
+  // cookies need to be sent across domains (Vercel frontend -> Render backend).
+  // Use SameSite=None and secure=true for cross-site requests.
   const cookieOpts = {
     httpOnly: true,
-    sameSite: "Lax" as const,
-    secure: (process.env.NODE_ENV || "").toLowerCase() === "production",
+    sameSite: "None" as const,   // allow cross-site transmission
+    secure: true,                 // always secure (cookies only on HTTPS)
     path: "/",
     maxAge: SESSION_TTL_SECONDS,
   };
@@ -199,8 +201,9 @@ async function clearSession(c: any) {
     const sessions = await getCollection<SessionDoc>("sessions");
     await sessions.deleteOne({ tokenHash });
   }
-  deleteCookie(c, SESSION_COOKIE, { path: "/" });
-  deleteCookie(c, SESSION_TYPE_COOKIE, { path: "/" });
+  // when deleting, match the same opts so the cookie is actually removed
+  deleteCookie(c, SESSION_COOKIE, { path: "/", sameSite: "None", secure: true });
+  deleteCookie(c, SESSION_TYPE_COOKIE, { path: "/", sameSite: "None", secure: true });
 }
 
 // Auth middleware (cookie-session based)
