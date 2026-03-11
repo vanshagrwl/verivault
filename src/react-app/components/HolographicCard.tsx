@@ -533,9 +533,9 @@ export default function HolographicCard({ certificate, isAdmin = false }: Hologr
       let data: any;
       try {
         data = await response.json();
-      } catch (parseErr) {
+      } catch (parseErr: any) {
         const text = await response.text();
-        data = { error: text || parseErr.message };
+        data = { error: text || (parseErr?.message ?? String(parseErr)) };
       }
       if (!response.ok) throw new Error(normalizeApiError(data, "Failed to send OTP"));
       setVerificationStep("otp");
@@ -563,9 +563,9 @@ export default function HolographicCard({ certificate, isAdmin = false }: Hologr
       let data: any;
       try {
         data = await response.json();
-      } catch (parseErr) {
+      } catch (parseErr: any) {
         const text = await response.text();
-        data = { error: text || parseErr.message };
+        data = { error: text || (parseErr?.message ?? String(parseErr)) };
       }
       if (!response.ok) throw new Error(normalizeApiError(data, "Invalid or expired OTP"));
       setIsVerified(true);
