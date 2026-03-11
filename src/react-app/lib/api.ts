@@ -1,7 +1,10 @@
 import type { ApiResponse, LoginRequest, LoginResponse, Certificate, CertificateCreate } from "@/shared/types";
 import type { User } from "@/lib/models";
 
-const API_BASE = import.meta.env.VITE_API_BASE || "/api";
+// default to the deployed backend; override with VITE_API_BASE if available
+const API_BASE =
+  import.meta.env.VITE_API_BASE ||
+  "https://verivault.onrender.com"; // change this if your render URL differs
 
 function toErrorMessage(value: unknown): string | undefined {
   if (value == null) return undefined;
