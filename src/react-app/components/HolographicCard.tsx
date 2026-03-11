@@ -589,36 +589,22 @@ export default function HolographicCard({ certificate, isAdmin = false }: Hologr
 
     const imgData = canvas.toDataURL("image/png");
 
-    // Create PDF whose dimensions match the canvas size (pixels) so the
-    // resulting document is exactly the same aspect ratio as the displayed
-    // certificate.  This avoids A4/landscape assumptions and makes the PDF
-    // responsive on mobile/tablet devices with arbitrary ratios.
-    const widthPx = canvas.width;
-    const heightPx = canvas.height;
+    // Use a standard A4 page and scale the certificate canvas to fit inside
+    // with margins. This keeps the file dimensions realistic and ensures
+    // mobile PDF viewers render it in full width.
+    const orientation = canvas.width >= canvas.height ? "landscape" : "portrait";
+    const pdf = new jsPDF({ orientation, unit: "mm", format: "a4" });
 
-    // convert pixels to millimetres using a higher DPI so the certificate
-    // fills a reasonable physical size. 96dpi yields very small documents on
-    // phones because screen canvases are narrow; using 150 or 300 dpi makes the
-    // PDF larger and the viewer will then scale it down, preventing the text
-    // from appearing cut off. 300 dpi is a good trade‑off for clarity.
-    const dpi = 300;
-    const pxToMm = (px: number) => (px * 25.4) / dpi;
-    let widthMm = pxToMm(widthPx);
-    let heightMm = pxToMm(heightPx);
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
 
-    // enforce a minimum page dimension (e.g. A5) to avoid extremely small files
-    const minMm = 100;
-    if (widthMm < minMm) widthMm = minMm;
-    if (heightMm < minMm) heightMm = minMm;
+    const scale = Math.min(pageWidth / canvas.width, pageHeight / canvas.height) * 0.95; // 95% to leave margin
+    const imgWidth = canvas.width * scale;
+    const imgHeight = canvas.height * scale;
+    const marginX = (pageWidth - imgWidth) / 2;
+    const marginY = (pageHeight - imgHeight) / 2;
 
-    const pdf = new jsPDF({
-      orientation: widthMm >= heightMm ? "landscape" : "portrait",
-      unit: "mm",
-      format: [widthMm, heightMm],
-    });
-
-    // draw image using mm units (jsPDF will scale accordingly)
-    pdf.addImage(imgData, "PNG", 0, 0, widthMm, heightMm);
+    pdf.addImage(imgData, "PNG", marginX, marginY, imgWidth, imgHeight);
     pdf.save(`certificate-${certificate.id}.pdf`);
   }, [certificate.id]);
 
