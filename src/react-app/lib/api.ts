@@ -6,6 +6,10 @@ const API_BASE =
   import.meta.env.VITE_API_BASE ||
   "https://verivault.onrender.com"; // change this if your render URL differs
 
+if (typeof window !== "undefined") {
+  console.log("[API] base url =", API_BASE);
+}
+
 function toErrorMessage(value: unknown): string | undefined {
   if (value == null) return undefined;
   if (typeof value === "string") {
@@ -32,6 +36,9 @@ async function request<T>(
   };
 
   try {
+    if (typeof window !== "undefined") {
+      console.log("[API] request", `${API_BASE}${endpoint}`, options);
+    }
     const response = await fetch(`${API_BASE}${endpoint}`, {
       ...options,
       headers,
