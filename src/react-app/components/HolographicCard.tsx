@@ -355,6 +355,12 @@ const VerificationDialog = memo(function VerificationDialog({
                   onChange={(e) => onEmailChange(e.target.value)}
                   disabled={isLoading}
                   className="w-full"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      if (!isLoading && userEmail) onSendOTP();
+                    }
+                  }}
                 />
               </div>
               <div className="flex gap-2">
@@ -396,6 +402,12 @@ const VerificationDialog = memo(function VerificationDialog({
                   value={otp}
                   onChange={(e) => onOtpChange(e.target.value.replace(/[^0-9]/g, ""))}
                   className="w-full text-center text-2xl tracking-widest font-mono"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      if (!isLoading && otp.length === 6) onVerifyOTP();
+                    }
+                  }}
                 />
               </div>
               <div className="text-xs text-gray-600 text-center">
