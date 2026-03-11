@@ -576,10 +576,11 @@ export default function HolographicCard({ certificate, isAdmin = false }: Hologr
   const handleDownload = useCallback(async () => {
     const { default: html2canvas } = await import("html2canvas");
     const { default: jsPDF } = await import("jspdf");
-    
+
     const element = document.getElementById(`certificate-${certificate.id}`);
     if (!element) return;
 
+    // Render element to canvas at device pixel ratio for clarity
     const canvas = await html2canvas(element, {
       scale: 2,
       backgroundColor: "#f5f1e8",
@@ -587,33 +588,22 @@ export default function HolographicCard({ certificate, isAdmin = false }: Hologr
     });
 
     const imgData = canvas.toDataURL("image/png");
+
+    // Create PDF whose dimensions match the canvas size (pixels) so the
+    // resulting document is exactly the same aspect ratio as the displayed
+    // certificate.  This avoids A4/landscape assumptions and makes the PDF
+    // responsive on mobile/tablet devices with arbitrary ratios.
+    const width = canvas.width;
+    const height = canvas.height;
+
     const pdf = new jsPDF({
-      orientation: "landscape",
-      unit: "mm",
-      format: "a4",
+      orientation: width >= height ? "landscape" : "portrait",
+      unit: "px",
+      format: [width, height],
     });
 
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
-
-    const margin = 25;
-    const maxWidth = pageWidth - margin * 2;
-    const maxHeight = pageHeight - margin * 2;
-
-    const imgAspect = canvas.width / canvas.height;
-
-    let renderWidth = maxWidth;
-    let renderHeight = maxWidth / imgAspect;
-
-    if (renderHeight > maxHeight) {
-      renderHeight = maxHeight;
-      renderWidth = maxHeight * imgAspect;
-    }
-
-    const offsetX = (pageWidth - renderWidth) / 2;
-    const offsetY = (pageHeight - renderHeight) / 2;
-
-    pdf.addImage(imgData, "PNG", offsetX, offsetY, renderWidth, renderHeight);
+    // place image at (0,0) filling whole page
+    pdf.addImage(imgData, "PNG", 0, 0, width, height);
     pdf.save(`certificate-${certificate.id}.pdf`);
   }, [certificate.id]);
 
