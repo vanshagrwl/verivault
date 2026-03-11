@@ -25,7 +25,7 @@ jobs:
         run: npm ci
 
       - name: Build frontend
-        run: npm run build --workspaces
+        run: npm run build
 
       - name: TypeScript build
         run: npm run build
