@@ -44,6 +44,11 @@ export async function getCollection<T extends Document>(name: string): Promise<C
   return database.collection<T>(name);
 }
 
+// expose the underlying MongoClient instance for advanced operations
+export function mongoClientInstance(): MongoClient | null {
+  return client;
+}
+
 export async function closeConnection(): Promise<void> {
   if (client) {
     await client.close();

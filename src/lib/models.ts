@@ -77,3 +77,13 @@ export interface OtpVerification {
   verifiedAt?: Date;
   createdAt?: Date;
 }
+
+// Session documents stored in the "sessions" collection
+export interface SessionDoc {
+  _id?: ObjectId;
+  tokenHash: string;
+  type: "user" | "admin";
+  email: string;
+  createdAt: Date;
+  expiresAt?: Date;
+}

@@ -3,9 +3,9 @@ import { cors } from "hono/cors";
 import { zValidator } from "@hono/zod-validator";
 import z from "zod";
 import { LoginSchema, CertificateCreateSchema } from "../shared/types";
-import { getCollection } from "../lib/mongodb";
+import { getCollection, connectToDatabase } from "../lib/mongodb";
 import { verifyUser, createUser, findUserByEmail, verifyAdmin, createAdmin, findAdminByEmail } from "../lib/auth";
-import type { User, Admin, Certificate, Student } from "../lib/models";
+import type { User, Admin, Certificate, Student, SessionDoc } from "../lib/models";
 import { getCookie, setCookie, deleteCookie } from "hono/cookie";
 import { generateOTP, createOTPVerification, verifyOTPRecord, sendOTPEmail } from "../lib/otp";
 
@@ -479,7 +479,6 @@ app.post(
   zValidator("json", z.object({ certificateId: z.string().min(1) })),
   async (c) => {
     try {
-      const user = c.get("user") as User;
       const { certificateId } = c.req.valid("json");
       const id = certificateId.trim().toUpperCase();
       const certificatesCollection = await getCollection<Certificate>("certificates");
@@ -1188,7 +1187,6 @@ app.post(
       const id = c.req.param("id");
       const { email } = c.req.valid("json");
       const certificatesCollection = await getCollection<Certificate>("certificates");
-      const studentsCollection = await getCollection<Student>("students");
       
       const cert = await certificatesCollection.findOne({ id });
       if (!cert) {
@@ -1503,7 +1501,7 @@ app.post("/api/verify-otp", async (c) => {
 // Admin endpoint to clear all certificates (for resetting data)
 app.delete("/api/admin/certificates/clear-all", async (c) => {
   try {
-    const db = mongoClient.db("VeriVault");
+    const db = await connectToDatabase();
     const certificatesCollection = db.collection("certificates");
     
     const result = await certificatesCollection.deleteMany({});
