@@ -540,14 +540,14 @@ export default function HolographicCard({ certificate, isAdmin = false }: Hologr
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: userEmail }),
       });
-      // some error paths return plain text (e.g. network/proxy failures or HTML pages),
-      // so try to parse JSON but fall back to text if it fails.
+      // read the raw body once; some error responses are plain text so
+      // parse to JSON if possible, otherwise preserve the text.
+      const rawText = await response.text();
       let data: any;
       try {
-        data = await response.json();
-      } catch (parseErr: any) {
-        const text = await response.text();
-        data = { error: text || (parseErr?.message ?? String(parseErr)) };
+        data = JSON.parse(rawText);
+      } catch (err: any) {
+        data = { error: rawText || (err?.message ?? String(err)) };
       }
       if (!response.ok) throw new Error(normalizeApiError(data, "Failed to send OTP"));
       setVerificationStep("otp");
@@ -572,12 +572,12 @@ export default function HolographicCard({ certificate, isAdmin = false }: Hologr
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: userEmail, otp }),
       });
+      const rawText = await response.text();
       let data: any;
       try {
-        data = await response.json();
-      } catch (parseErr: any) {
-        const text = await response.text();
-        data = { error: text || (parseErr?.message ?? String(parseErr)) };
+        data = JSON.parse(rawText);
+      } catch (err: any) {
+        data = { error: rawText || (err?.message ?? String(err)) };
       }
       if (!response.ok) throw new Error(normalizeApiError(data, "Invalid or expired OTP"));
       setIsVerified(true);
