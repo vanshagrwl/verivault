@@ -106,7 +106,7 @@ const CertificatePreviewComponent = memo(function CertificatePreviewComponent({
           <div className="absolute bottom-1 sm:bottom-1.5 left-1 sm:left-1.5 w-2 sm:w-3 h-2 sm:h-3 border-l border-b border-yellow-600" />
           <div className="absolute bottom-1 sm:bottom-1.5 right-1 sm:right-1.5 w-2 sm:w-3 h-2 sm:h-3 border-r border-b border-yellow-600" />
 
-          <div className="h-full px-4 sm:px-8 py-4 sm:py-6 flex flex-col items-center justify-between text-center max-w-[90%] mx-auto">
+          <div className="h-full px-6 sm:px-12 py-6 sm:py-12 flex flex-col items-center justify-between text-center max-w-[90%] mx-auto">
             <h1
               style={{ fontFamily: "Georgia, serif" }}
               className="text-xs sm:text-sm md:text-base font-bold text-black tracking-wide leading-tight"
@@ -581,13 +581,22 @@ export default function HolographicCard({ certificate, isAdmin = false }: Hologr
     if (!element) return;
 
     // Render element to canvas at device pixel ratio for clarity.
-    // explicitly set width/height to include any rotated/overflow text content.
+    // we capture using the element's bounding rect and add a small margin
+    // to ensure the thin yellow border and any overflow text are not clipped.
+    const rect = element.getBoundingClientRect();
+    const marginPx = 8; // a few pixels of padding around the element
     const canvas = await html2canvas(element, {
       scale: 2,
       backgroundColor: "#f5f1e8",
       useCORS: true,
-      width: element.scrollWidth,
-      height: element.scrollHeight,
+      // width/height set explicitly so rotated/overflow content and our
+      // extra margin are included. html2canvas will start capturing at
+      // x/y offsets, so we push the region outward by half the margin.
+      width: rect.width + marginPx,
+      height: rect.height + marginPx,
+      x: -marginPx / 2,
+      y: -marginPx / 2,
+      scrollX: -window.scrollX, // include any horizontal scrolling
       scrollY: -window.scrollY, // avoid capturing shifted viewport
     });
 
