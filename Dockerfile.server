@@ -1,0 +1,16 @@
+FROM node:18-alpine
+
+WORKDIR /usr/src/app
+
+# Install dependencies
+COPY package.json package-lock.json ./
+RUN npm ci --only=production
+
+# Copy source
+COPY . .
+
+# Expose port (can be overridden by env)
+EXPOSE 8787
+
+# Use tsx to run TypeScript entry (server-local.ts)
+CMD ["npx", "tsx", "src/server-local.ts"]

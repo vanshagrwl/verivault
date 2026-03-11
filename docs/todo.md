@@ -1,0 +1,11 @@
+# Todo
+- #3: Setup database schema for students and certificates
+- #4: Build admin dashboard with command palette (Cmd+K)
+- #5: Implement Excel/CSV upload system with processing animation
+- #6: Create public certificate search with scan animation
+- #7: Add QR code generation for certificates
+- #8: Implement PDF export functionality
+- #9: Build scrollytelling shield mascot that follows scroll position
+- #10: Add magnetic cursor and liquid button effects
+- #11: Implement CRUD operations for student records
+- #12: Add theme toggle (light/dark mode)
