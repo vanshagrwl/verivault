@@ -580,11 +580,15 @@ export default function HolographicCard({ certificate, isAdmin = false }: Hologr
     const element = document.getElementById(`certificate-${certificate.id}`);
     if (!element) return;
 
-    // Render element to canvas at device pixel ratio for clarity
+    // Render element to canvas at device pixel ratio for clarity.
+    // explicitly set width/height to include any rotated/overflow text content.
     const canvas = await html2canvas(element, {
       scale: 2,
       backgroundColor: "#f5f1e8",
       useCORS: true,
+      width: element.scrollWidth,
+      height: element.scrollHeight,
+      scrollY: -window.scrollY, // avoid capturing shifted viewport
     });
 
     const imgData = canvas.toDataURL("image/png");
@@ -599,6 +603,10 @@ export default function HolographicCard({ certificate, isAdmin = false }: Hologr
     const pageHeight = pdf.internal.pageSize.getHeight();
 
     const scale = Math.min(pageWidth / canvas.width, pageHeight / canvas.height) * 0.95; // 95% to leave margin
+    // if scaled content still slightly overflows, reduce scale further
+    if (canvas.width * scale > pageWidth || canvas.height * scale > pageHeight) {
+      scale *= 0.98;
+    }
     const imgWidth = canvas.width * scale;
     const imgHeight = canvas.height * scale;
     const marginX = (pageWidth - imgWidth) / 2;
