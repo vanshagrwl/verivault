@@ -593,17 +593,22 @@ export default function HolographicCard({ certificate, isAdmin = false }: Hologr
     // resulting document is exactly the same aspect ratio as the displayed
     // certificate.  This avoids A4/landscape assumptions and makes the PDF
     // responsive on mobile/tablet devices with arbitrary ratios.
-    const width = canvas.width;
-    const height = canvas.height;
+    const widthPx = canvas.width;
+    const heightPx = canvas.height;
+
+    // convert pixels to millimetres for better sizing in PDF viewers
+    const pxToMm = (px: number) => (px * 25.4) / 96; // assuming 96dpi
+    const widthMm = pxToMm(widthPx);
+    const heightMm = pxToMm(heightPx);
 
     const pdf = new jsPDF({
-      orientation: width >= height ? "landscape" : "portrait",
-      unit: "px",
-      format: [width, height],
+      orientation: widthMm >= heightMm ? "landscape" : "portrait",
+      unit: "mm",
+      format: [widthMm, heightMm],
     });
 
-    // place image at (0,0) filling whole page
-    pdf.addImage(imgData, "PNG", 0, 0, width, height);
+    // draw image using mm units (jsPDF will scale accordingly)
+    pdf.addImage(imgData, "PNG", 0, 0, widthMm, heightMm);
     pdf.save(`certificate-${certificate.id}.pdf`);
   }, [certificate.id]);
 
