@@ -449,7 +449,8 @@ const VerificationDialog = memo(function VerificationDialog({
 });
 
 export default function HolographicCard({ certificate, isAdmin = false }: HolographicCardProps) {
-  const [isVerified, setIsVerified] = useState(false);
+  // if the certificate already has a verifiedAt timestamp, mark as verified
+  const [isVerified, setIsVerified] = useState(!!certificate.verifiedAt);
   const [verificationStep, setVerificationStep] = useState<VerificationStep>("contact");
   const [userEmail, setUserEmail] = useState("");
   const [otp, setOtp] = useState("");
@@ -476,6 +477,13 @@ export default function HolographicCard({ certificate, isAdmin = false }: Hologr
   };
 
   useEffect(() => {
+    // if server already marked this certificate verified, reflect that
+    if (certificate.verifiedAt) {
+      setIsVerified(true);
+      setVerificationStep("verified");
+      setError("");
+      return;
+    }
     try {
       const raw = localStorage.getItem(VERIFIED_STORAGE_KEY);
       if (!raw) return;
@@ -489,7 +497,7 @@ export default function HolographicCard({ certificate, isAdmin = false }: Hologr
       // ignore localStorage errors
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [certificate.id]);
+  }, [certificate.id, certificate.verifiedAt]);
 
   const markCertificateVerifiedLocally = useCallback(() => {
     try {
