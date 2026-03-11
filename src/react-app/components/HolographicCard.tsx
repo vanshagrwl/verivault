@@ -602,7 +602,7 @@ export default function HolographicCard({ certificate, isAdmin = false }: Hologr
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
 
-    const scale = Math.min(pageWidth / canvas.width, pageHeight / canvas.height) * 0.95; // 95% to leave margin
+    let scale = Math.min(pageWidth / canvas.width, pageHeight / canvas.height) * 0.95; // 95% to leave margin
     // if scaled content still slightly overflows, reduce scale further
     if (canvas.width * scale > pageWidth || canvas.height * scale > pageHeight) {
       scale *= 0.98;
