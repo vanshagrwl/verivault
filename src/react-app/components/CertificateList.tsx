@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Trash2, Eye, Award, Calendar, Ban, Briefcase } from "lucide-react";
 import { Button } from "./ui/button";
