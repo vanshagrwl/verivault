@@ -4,6 +4,7 @@ import { Download, CheckCircle2, Shield } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog";
+import { certificatesApi } from "@/react-app/lib/api";
 
 interface CertificateData {
   id: string;
@@ -535,21 +536,8 @@ export default function HolographicCard({ certificate, isAdmin = false }: Hologr
     setIsLoading(true);
     setError("");
     try {
-      const response = await fetch(`/api/certificates/${encodeURIComponent(certificate.id)}/request-otp`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: userEmail }),
-      });
-      // read the raw body once; some error responses are plain text so
-      // parse to JSON if possible, otherwise preserve the text.
-      const rawText = await response.text();
-      let data: any;
-      try {
-        data = JSON.parse(rawText);
-      } catch (err: any) {
-        data = { error: rawText || (err?.message ?? String(err)) };
-      }
-      if (!response.ok) throw new Error(normalizeApiError(data, "Failed to send OTP"));
+      const res = await certificatesApi.requestOTP(certificate.id, userEmail);
+      if (!res.success) throw new Error(res.error || "Failed to send OTP");
       setVerificationStep("otp");
       setError("");
     } catch (err) {
@@ -567,19 +555,8 @@ export default function HolographicCard({ certificate, isAdmin = false }: Hologr
     setIsLoading(true);
     setError("");
     try {
-      const response = await fetch(`/api/certificates/${encodeURIComponent(certificate.id)}/verify-otp`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: userEmail, otp }),
-      });
-      const rawText = await response.text();
-      let data: any;
-      try {
-        data = JSON.parse(rawText);
-      } catch (err: any) {
-        data = { error: rawText || (err?.message ?? String(err)) };
-      }
-      if (!response.ok) throw new Error(normalizeApiError(data, "Invalid or expired OTP"));
+      const res = await certificatesApi.verifyOTP(certificate.id, userEmail, otp);
+      if (!res.success) throw new Error(res.error || "Invalid or expired OTP");
       setIsVerified(true);
       setVerificationStep("verified");
       setError("");
