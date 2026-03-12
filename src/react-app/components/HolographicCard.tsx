@@ -635,9 +635,10 @@ export default function HolographicCard({ certificate, isAdmin = false }: Hologr
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
 
-    // Base scale leaves ~15–20% whitespace around the certificate.
+    // Base scale leaves generous whitespace around the certificate so that
+    // no text touches or exceeds the page edges even on small mobile viewers.
     const maxScale = Math.min(pageWidth / canvas.width, pageHeight / canvas.height);
-    const scale = maxScale * 0.8;
+    const scale = maxScale * 0.7;
     const imgWidth = canvas.width * scale;
     const imgHeight = canvas.height * scale;
     const marginX = (pageWidth - imgWidth) / 2;
