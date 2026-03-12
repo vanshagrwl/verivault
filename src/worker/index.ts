@@ -269,6 +269,27 @@ app.get("/", (c) => {
   return c.json({ success: true, message: "VeriVault API" });
 });
 
+// Detailed health check (helps verify deployed version/provider)
+app.get("/api/health", (c) => {
+  const version =
+    process.env.RENDER_GIT_COMMIT ||
+    process.env.VERCEL_GIT_COMMIT_SHA ||
+    process.env.GIT_COMMIT ||
+    "unknown";
+
+  // after switching providers, this should always be "resend"
+  const otpEmailProvider = "resend";
+
+  return c.json({
+    success: true,
+    data: {
+      version,
+      otpEmailProvider,
+      nodeEnv: process.env.NODE_ENV || "unknown",
+    },
+  });
+});
+
 // Current session (works for both user and admin tokens)
 app.get("/api/auth/me", authMiddleware, async (c) => {
   const authType = c.get("authType");
@@ -1209,7 +1230,16 @@ app.post(
       // Generate and send OTP
       const otp = generateOTP();
       await createOTPVerification(id, email, otp);
-      await sendOTPEmail(email, otp, cert.name);
+      try {
+        await sendOTPEmail(email, otp, cert.name);
+      } catch (err: any) {
+        console.error("OTP email send failed:", {
+          certificateId: id,
+          email,
+          error: err?.message || String(err),
+        });
+        return c.json({ success: false, error: "Failed to send OTP email. Please try again later." }, 502);
+      }
       
       return c.json({
         success: true,
