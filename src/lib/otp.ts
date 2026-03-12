@@ -84,36 +84,10 @@ function isNodeRuntime(): boolean {
   return typeof process !== "undefined" && !!(process as any).versions?.node;
 }
 
-// ---- Gmail SMTP helper ----
-let cachedTransporter: any | null = null;
-
-async function getSmtpTransporter() {
-  if (cachedTransporter) return cachedTransporter;
-
-  const host = (process.env.SMTP_HOST || "smtp.gmail.com").trim();
-  const port = Number(process.env.SMTP_PORT || "465") || 465;
-  const user = (process.env.SMTP_USER || process.env.FROM_EMAIL || "").trim();
-  const pass = (process.env.SMTP_PASS || "").trim();
-
-  if (!user || !pass) {
-    throw new Error("SMTP_USER/SMTP_PASS not configured");
-  }
-
-  // Nodemailer is CommonJS; use dynamic import.
-  const mod: any = await import("nodemailer");
-  const nodemailer = mod?.default ?? mod;
-
-  cachedTransporter = nodemailer.createTransport({
-    host,
-    port,
-    secure: port === 465,
-    auth: { user, pass },
-  });
-
-  return cachedTransporter;
-}
-
-// Send OTP email via Gmail SMTP (falls back to console log if not configured)
+// Send OTP email via Brevo HTTP API (works on Render because it's HTTPS)
+// Requirements:
+// - BREVO_API_KEY (or BREVO_SMTP_USER) set
+// - FROM_EMAIL set to a verified Brevo sender (your Gmail can be verified in Brevo)
 export async function sendOTPEmail(email: string, otp: string, studentName: string): Promise<void> {
   const subject = "VeriVault Certificate Verification OTP";
   const text = `Hello ${studentName},
@@ -126,41 +100,52 @@ Regards,
 VeriVault Team
 `;
 
-  const from = (process.env.FROM_EMAIL || "").trim() || (process.env.SMTP_USER || "").trim();
-
-  if (!isNodeRuntime()) {
-    console.log(`\n📧 OTP Email (dev fallback, non-Node runtime) to ${email}:`);
-    console.log(`   Subject: ${subject}`);
-    console.log(`   Body: ${text}`);
-    return;
-  }
-
-  if (!from) {
-    console.log(`\n📧 OTP Email (dev fallback, missing FROM_EMAIL) to ${email}:`);
-    console.log(`   Subject: ${subject}`);
-    console.log(`   Body: ${text}`);
-    return;
-  }
-
   try {
-    const transporter = await getSmtpTransporter();
+    const apiKey =
+      process.env.BREVO_API_KEY?.trim() ||
+      process.env.BREVO_SMTP_USER?.trim();
+    const from = process.env.FROM_EMAIL?.trim();
 
-    await transporter.sendMail({
-      from,
-      to: email,
+    if (!apiKey || !from || !isNodeRuntime() || !(globalThis as any).fetch) {
+      console.log(`\n📧 OTP Email (dev fallback) to ${email}:`);
+      console.log(`   Subject: ${subject}`);
+      console.log(`   Body: ${text}`);
+      return;
+    }
+
+    const fetchFn: any = (globalThis as any).fetch;
+    const payload = {
+      sender: { email: from, name: "VeriVault" },
+      to: [{ email, name: studentName }],
       subject,
-      text,
-      html: `<p>Hello ${studentName},</p>
+      textContent: text,
+      htmlContent: `<p>Hello ${studentName},</p>
 <p>Your OTP for certificate verification is: <strong>${otp}</strong></p>
 <p>This OTP is valid for 10 minutes.</p>
 <p>Regards,<br/>VeriVault Team</p>`,
+    };
+
+    const res = await fetchFn("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "api-key": apiKey,
+      },
+      body: JSON.stringify(payload),
     });
 
+    if (!res.ok) {
+      const bodyText = await res.text().catch(() => "");
+      const safeMessage = String(bodyText || `HTTP ${res.status}`).slice(0, 300);
+      console.error("Brevo API error:", res.status, safeMessage);
+      throw new Error(`Brevo error (${res.status}): ${safeMessage}`);
+    }
+
     if (process.env.NODE_ENV !== "production") {
-      console.log(`✓ OTP email sent via SMTP to ${email}`);
+      console.log(`✓ OTP email sent via Brevo to ${email}`);
     }
   } catch (err: any) {
-    console.error("SMTP OTP email error:", err?.message || err);
-    throw new Error("Failed to send OTP email via SMTP");
+    const msg = err?.message || String(err);
+    throw new Error(msg);
   }
 }
