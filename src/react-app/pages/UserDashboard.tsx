@@ -19,15 +19,48 @@ export default function UserDashboard() {
   const [claimId, setClaimId] = useState("");
   const [claimBusy, setClaimBusy] = useState(false);
 
+  const VERIFIED_STORAGE_KEY = "verivault_verified_certificates";
+
   const load = async () => {
     setIsLoading(true);
     setError("");
     const res = await certificatesApi.my();
+    let merged: Certificate[] = [];
+
     if (res.success && res.data) {
-      setCertificates(res.data);
+      merged = res.data;
     } else {
       setError(res.error || "Failed to load your certificates");
     }
+
+    // Also include certificates that were verified via OTP and stored in localStorage,
+    // so users don't need to re-search them every time.
+    if (typeof window !== "undefined") {
+      try {
+        const raw = window.localStorage.getItem(VERIFIED_STORAGE_KEY);
+        if (raw) {
+          const ids = JSON.parse(raw) as string[];
+          if (Array.isArray(ids) && ids.length > 0) {
+            const existingIds = new Set(merged.map((c) => c.id));
+            const toFetch = ids.filter((id) => !existingIds.has(id));
+
+            const results = await Promise.all(
+              toFetch.map((id) => certificatesApi.getById(id))
+            );
+
+            for (const r of results) {
+              if (r.success && r.data) {
+                merged.push(r.data);
+              }
+            }
+          }
+        }
+      } catch {
+        // ignore localStorage or parsing errors
+      }
+    }
+
+    setCertificates(merged);
     setIsLoading(false);
   };
 
