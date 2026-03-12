@@ -59,7 +59,6 @@ const CertificatePreviewComponent = memo(function CertificatePreviewComponent({
       d = parsed;
     }
 
-    d.setFullYear(2026);
     return d.toLocaleDateString("en-US", {
       year: "numeric",
       month: "long",
@@ -67,7 +66,8 @@ const CertificatePreviewComponent = memo(function CertificatePreviewComponent({
     });
   };
 
-  const formattedDate = parseIssueDate(certificate.date);
+  // Prefer internship end date as the issue date; fall back to the raw `date` field.
+  const formattedDate = parseIssueDate(certificate.internshipEndDate || certificate.date);
   const internshipDomain = certificate.internshipDomain || certificate.course;
 
   const formatInternshipDate = (value?: string) => {
@@ -76,7 +76,7 @@ const CertificatePreviewComponent = memo(function CertificatePreviewComponent({
     if (Number.isNaN(d.getTime())) return value;
     const day = String(d.getDate()).padStart(2, "0");
     const month = String(d.getMonth() + 1).padStart(2, "0");
-    const year = 2026;
+    const year = d.getFullYear();
     return `${day}-${month}-${year}`;
   };
 
