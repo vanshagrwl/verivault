@@ -626,20 +626,18 @@ export default function HolographicCard({ certificate, isAdmin = false }: Hologr
 
     const imgData = canvas.toDataURL("image/png");
 
-    // Use a standard A4 page and scale the certificate canvas to fit inside
-    // with margins. This keeps the file dimensions realistic and ensures
-    // mobile PDF viewers render it in full width.
+    // Use a standard A4 page and scale the certificate canvas to fit well inside
+    // with generous margins. This keeps the file dimensions realistic and avoids
+    // touching the edges on mobile PDF viewers.
     const orientation = canvas.width >= canvas.height ? "landscape" : "portrait";
     const pdf = new jsPDF({ orientation, unit: "mm", format: "a4" });
 
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
 
-    let scale = Math.min(pageWidth / canvas.width, pageHeight / canvas.height) * 0.95; // 95% to leave margin
-    // if scaled content still slightly overflows, reduce scale further
-    if (canvas.width * scale > pageWidth || canvas.height * scale > pageHeight) {
-      scale *= 0.98;
-    }
+    // Base scale leaves ~15–20% whitespace around the certificate.
+    const maxScale = Math.min(pageWidth / canvas.width, pageHeight / canvas.height);
+    const scale = maxScale * 0.8;
     const imgWidth = canvas.width * scale;
     const imgHeight = canvas.height * scale;
     const marginX = (pageWidth - imgWidth) / 2;
