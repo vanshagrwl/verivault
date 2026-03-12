@@ -23,7 +23,6 @@ export default function CertificateList({ refreshTrigger, onRefresh, certificate
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const limit = 3; // Show 3 cards per page/slide
-  const carouselRef = useRef<HTMLDivElement>(null);
 
   // Determine if we're using the override (search results) or loading from API
   const displayCertificates = certificatesOverride !== undefined ? certificatesOverride : certificates;
@@ -51,19 +50,6 @@ export default function CertificateList({ refreshTrigger, onRefresh, certificate
     loadCertificates();
   }, [refreshTrigger, page]);
 
-  // Smooth scroll carousel into view when page changes (only if carousel is out of view)
-  useEffect(() => {
-    if (carouselRef.current && !isSearching) {
-      const rect = carouselRef.current.getBoundingClientRect();
-      // Only scroll if carousel is below the viewport (rest of page pushed down)
-      if (rect.top > window.innerHeight) {
-        carouselRef.current.scrollIntoView({
-          behavior: "smooth",
-          block: "nearest",
-        });
-      }
-    }
-  }, [page, isSearching]);
 
   // Auto-go to previous page if current page becomes empty (but stay on page 1 if it's the last page)
   useEffect(() => {
@@ -108,7 +94,7 @@ export default function CertificateList({ refreshTrigger, onRefresh, certificate
   // Show skeleton cards while searching
   if (isSearching && displayCertificates.length === 0) {
     return (
-      <div ref={carouselRef}>
+      <div>
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[0, 1, 2].map((index) => (
             <SkeletonCard key={`skeleton-${index}`} />
@@ -168,7 +154,7 @@ export default function CertificateList({ refreshTrigger, onRefresh, certificate
   }
 
   return (
-    <div ref={carouselRef}>
+    <div>
       <div className="relative">
         <AnimatePresence mode="wait">
           <motion.div
