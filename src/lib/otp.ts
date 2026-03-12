@@ -84,8 +84,8 @@ function isNodeRuntime(): boolean {
   return typeof process !== "undefined" && !!(process as any).versions?.node;
 }
 
-// Send OTP email via Brevo HTTP API (falls back to console log if not configured)
-// Using HTTPS avoids SMTP port blocking on Render and similar hosts.
+// Send OTP email via Resend HTTP API (falls back to console log if not configured)
+// Using HTTPS avoids SMTP port blocking and Brevo DNS issues on some hosts.
 export async function sendOTPEmail(email: string, otp: string, studentName: string): Promise<void> {
   const subject = "VeriVault Certificate Verification OTP";
   const text = `Hello ${studentName},
@@ -98,10 +98,9 @@ Regards,
 VeriVault Team
 `;
 
-  const apiKey =
-    process.env.BREVO_API_KEY?.trim() ||
-    process.env.BREVO_SMTP_USER?.trim(); // Brevo often reuses the same key
-  const from = process.env.FROM_EMAIL?.trim();
+  const apiKey = process.env.RESEND_API_KEY?.trim();
+  // Resend requires a verified sender. For quick testing you can use `onboarding@resend.dev`.
+  const from = (process.env.FROM_EMAIL || process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev").trim();
 
   if (!apiKey || !from || !isNodeRuntime() || !(globalThis as any).fetch) {
     // Fallback for local/dev or misconfigured environments.
@@ -114,36 +113,28 @@ VeriVault Team
   const fetchFn: any = (globalThis as any).fetch;
 
   const payload = {
-    sender: {
-      email: from,
-      name: "VeriVault",
-    },
-    to: [
-      {
-        email,
-        name: studentName,
-      },
-    ],
+    from,
+    to: [email],
     subject,
-    textContent: text,
-    htmlContent: `<p>Hello ${studentName},</p>
+    text,
+    html: `<p>Hello ${studentName},</p>
 <p>Your OTP for certificate verification is: <strong>${otp}</strong></p>
 <p>This OTP is valid for 10 minutes.</p>
 <p>Regards,<br/>VeriVault Team</p>`,
   };
 
-  const res = await fetchFn("https://api.brevo.com/v3/smtp/email", {
+  const res = await fetchFn("https://api.resend.com/emails", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "api-key": apiKey,
+      Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify(payload),
   });
 
   if (!res.ok) {
     const body = await res.text().catch(() => "");
-    console.error("Brevo API error:", res.status, body);
+    console.error("Resend API error:", res.status, body);
     throw new Error("Failed to send OTP email");
   }
 
