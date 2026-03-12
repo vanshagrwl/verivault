@@ -84,8 +84,36 @@ function isNodeRuntime(): boolean {
   return typeof process !== "undefined" && !!(process as any).versions?.node;
 }
 
-// Send OTP email via Resend HTTP API (falls back to console log if not configured)
-// Using HTTPS avoids SMTP port blocking and Brevo DNS issues on some hosts.
+// ---- Gmail SMTP helper ----
+let cachedTransporter: any | null = null;
+
+async function getSmtpTransporter() {
+  if (cachedTransporter) return cachedTransporter;
+
+  const host = (process.env.SMTP_HOST || "smtp.gmail.com").trim();
+  const port = Number(process.env.SMTP_PORT || "465") || 465;
+  const user = (process.env.SMTP_USER || process.env.FROM_EMAIL || "").trim();
+  const pass = (process.env.SMTP_PASS || "").trim();
+
+  if (!user || !pass) {
+    throw new Error("SMTP_USER/SMTP_PASS not configured");
+  }
+
+  // Nodemailer is CommonJS; use dynamic import.
+  const mod: any = await import("nodemailer");
+  const nodemailer = mod?.default ?? mod;
+
+  cachedTransporter = nodemailer.createTransport({
+    host,
+    port,
+    secure: port === 465,
+    auth: { user, pass },
+  });
+
+  return cachedTransporter;
+}
+
+// Send OTP email via Gmail SMTP (falls back to console log if not configured)
 export async function sendOTPEmail(email: string, otp: string, studentName: string): Promise<void> {
   const subject = "VeriVault Certificate Verification OTP";
   const text = `Hello ${studentName},
@@ -98,59 +126,41 @@ Regards,
 VeriVault Team
 `;
 
-  const apiKey = process.env.RESEND_API_KEY?.trim();
-  // Resend requires a verified sender. For quick testing you can use `onboarding@resend.dev`.
-  const from = (process.env.FROM_EMAIL || process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev").trim();
+  const from = (process.env.FROM_EMAIL || "").trim() || (process.env.SMTP_USER || "").trim();
 
-  if (!apiKey || !from || !isNodeRuntime() || !(globalThis as any).fetch) {
-    // Fallback for local/dev or misconfigured environments.
-    console.log(`\n📧 OTP Email (dev fallback) to ${email}:`);
+  if (!isNodeRuntime()) {
+    console.log(`\n📧 OTP Email (dev fallback, non-Node runtime) to ${email}:`);
     console.log(`   Subject: ${subject}`);
     console.log(`   Body: ${text}`);
     return;
   }
 
-  const fetchFn: any = (globalThis as any).fetch;
+  if (!from) {
+    console.log(`\n📧 OTP Email (dev fallback, missing FROM_EMAIL) to ${email}:`);
+    console.log(`   Subject: ${subject}`);
+    console.log(`   Body: ${text}`);
+    return;
+  }
 
-  const payload = {
-    from,
-    to: [email],
-    subject,
-    text,
-    html: `<p>Hello ${studentName},</p>
+  try {
+    const transporter = await getSmtpTransporter();
+
+    await transporter.sendMail({
+      from,
+      to: email,
+      subject,
+      text,
+      html: `<p>Hello ${studentName},</p>
 <p>Your OTP for certificate verification is: <strong>${otp}</strong></p>
 <p>This OTP is valid for 10 minutes.</p>
 <p>Regards,<br/>VeriVault Team</p>`,
-  };
+    });
 
-  const res = await fetchFn("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify(payload),
-  });
-
-  if (!res.ok) {
-    const bodyText = await res.text().catch(() => "");
-    let message = bodyText || `HTTP ${res.status}`;
-    try {
-      const parsed = JSON.parse(bodyText || "{}");
-      message =
-        (typeof parsed?.message === "string" && parsed.message) ||
-        (typeof parsed?.error === "string" && parsed.error) ||
-        message;
-    } catch {
-      // keep message as text
+    if (process.env.NODE_ENV !== "production") {
+      console.log(`✓ OTP email sent via SMTP to ${email}`);
     }
-
-    const safeMessage = String(message).slice(0, 300);
-    console.error("Resend API error:", res.status, safeMessage);
-    throw new Error(`Resend error (${res.status}): ${safeMessage}`);
-  }
-
-  if (process.env.NODE_ENV !== "production") {
-    console.log(`✓ OTP email sent to ${email}`);
+  } catch (err: any) {
+    console.error("SMTP OTP email error:", err?.message || err);
+    throw new Error("Failed to send OTP email via SMTP");
   }
 }
