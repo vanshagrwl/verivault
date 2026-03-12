@@ -1238,7 +1238,13 @@ app.post(
           email,
           error: err?.message || String(err),
         });
-        return c.json({ success: false, error: "Failed to send OTP email. Please try again later." }, 502);
+        return c.json(
+          {
+            success: false,
+            error: err?.message || "Failed to send OTP email. Please try again later.",
+          },
+          502
+        );
       }
       
       return c.json({

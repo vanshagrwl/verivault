@@ -133,9 +133,21 @@ VeriVault Team
   });
 
   if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    console.error("Resend API error:", res.status, body);
-    throw new Error("Failed to send OTP email");
+    const bodyText = await res.text().catch(() => "");
+    let message = bodyText || `HTTP ${res.status}`;
+    try {
+      const parsed = JSON.parse(bodyText || "{}");
+      message =
+        (typeof parsed?.message === "string" && parsed.message) ||
+        (typeof parsed?.error === "string" && parsed.error) ||
+        message;
+    } catch {
+      // keep message as text
+    }
+
+    const safeMessage = String(message).slice(0, 300);
+    console.error("Resend API error:", res.status, safeMessage);
+    throw new Error(`Resend error (${res.status}): ${safeMessage}`);
   }
 
   if (process.env.NODE_ENV !== "production") {
