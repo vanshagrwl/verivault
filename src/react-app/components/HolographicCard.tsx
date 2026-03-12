@@ -43,20 +43,28 @@ const CertificatePreviewComponent = memo(function CertificatePreviewComponent({
   onVerifyClick: () => void;
   onDownloadClick: () => Promise<void>;
 }) {
+  const excelSerialToDate = (serial: number): Date => {
+    const base = new Date(Date.UTC(1899, 11, 30)); // Excel base date
+    base.setUTCDate(base.getUTCDate() + serial);
+    return base;
+  };
+
   const parseIssueDate = (value?: string): string => {
     if (!value) return "";
     const trimmed = String(value).trim();
 
     let d: Date;
     if (/^\d+$/.test(trimmed)) {
-      const serial = Number(trimmed);
-      const base = new Date(Date.UTC(1899, 11, 30));
-      base.setUTCDate(base.getUTCDate() + serial);
-      d = base;
+      d = excelSerialToDate(Number(trimmed));
     } else {
       const parsed = new Date(trimmed);
       if (Number.isNaN(parsed.getTime())) return trimmed;
-      d = parsed;
+      // Sometimes Excel serials can be parsed as years like 45809 – guard that.
+      if (parsed.getFullYear() > 3000) {
+        d = excelSerialToDate(Number(trimmed));
+      } else {
+        d = parsed;
+      }
     }
 
     return d.toLocaleDateString("en-US", {
@@ -72,8 +80,21 @@ const CertificatePreviewComponent = memo(function CertificatePreviewComponent({
 
   const formatInternshipDate = (value?: string) => {
     if (!value) return "";
-    const d = new Date(value);
-    if (Number.isNaN(d.getTime())) return value;
+    const trimmed = String(value).trim();
+
+    let d: Date;
+    if (/^\d+$/.test(trimmed)) {
+      d = excelSerialToDate(Number(trimmed));
+    } else {
+      const parsed = new Date(trimmed);
+      if (Number.isNaN(parsed.getTime())) return value;
+      if (parsed.getFullYear() > 3000) {
+        d = excelSerialToDate(Number(trimmed));
+      } else {
+        d = parsed;
+      }
+    }
+
     const day = String(d.getDate()).padStart(2, "0");
     const month = String(d.getMonth() + 1).padStart(2, "0");
     const year = d.getFullYear();
