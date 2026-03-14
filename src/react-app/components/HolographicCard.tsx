@@ -107,18 +107,20 @@ const CertificatePreviewComponent = memo(function CertificatePreviewComponent({
   const CertificatePreview = () => (
     <div
       id={`certificate-${certificate.id}`}
-      className="w-full certificate-canvas"
-      style={{
-        backgroundColor: "#f5f1e8",
-        backgroundImage: `
+      className="w-full certificate-root"
+    >
+      <div
+        className="relative h-full w-full p-4 sm:p-6 md:p-8 certificate-inner"
+        style={{
+          backgroundColor: "#f5f1e8",
+          backgroundImage: `
           linear-gradient(45deg, rgba(212, 175, 55, 0.05) 1px, transparent 1px),
           linear-gradient(-45deg, rgba(212, 175, 55, 0.05) 1px, transparent 1px)
         `,
-        backgroundSize: "60px 60px",
-        aspectRatio: "11 / 8.5",
-      }}
-    >
-      <div className="relative h-full w-full p-4 sm:p-6 md:p-8">
+          backgroundSize: "60px 60px",
+          aspectRatio: "11 / 8.5",
+        }}
+      >
         <div
           style={{ boxShadow: "inset 0 0 0 1px #d4af37" }}
           className="h-full border border-yellow-700/80 relative flex flex-col rounded-lg"
@@ -245,7 +247,7 @@ const CertificatePreviewComponent = memo(function CertificatePreviewComponent({
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-4 sm:p-6 md:p-8">
           <div className="md:col-span-2">
             <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Certificate Preview</h3>
-            <div className="bg-gray-50 dark:bg-slate-800 rounded-xl overflow-hidden border border-gray-300 dark:border-gray-600 certificate-shell">
+            <div className="bg-gray-50 dark:bg-slate-800 rounded-xl overflow-hidden border border-gray-300 dark:border-gray-600">
               <CertificatePreview />
             </div>
           </div>
@@ -601,50 +603,46 @@ export default function HolographicCard({ certificate, isAdmin = false }: Hologr
     const { default: html2canvas } = await import("html2canvas");
     const { default: jsPDF } = await import("jspdf");
 
-    const element = document.getElementById(`certificate-${certificate.id}`);
-    if (!element) return;
+    const root = document.getElementById(`certificate-${certificate.id}`);
+    if (!root) return;
 
-    // Render element to canvas at device pixel ratio for clarity.
-    // we capture using the element's bounding rect and add a small margin
-    // to ensure the thin yellow border and any overflow text are not clipped.
-    const rect = element.getBoundingClientRect();
-    const marginPx = 8; // a few pixels of padding around the element
-    const canvas = await html2canvas(element, {
-      scale: 2,
-      backgroundColor: "#f5f1e8",
-      useCORS: true,
-      // width/height set explicitly so rotated/overflow content and our
-      // extra margin are included. html2canvas will start capturing at
-      // x/y offsets, so we push the region outward by half the margin.
-      width: rect.width + marginPx,
-      height: rect.height + marginPx,
-      x: -marginPx / 2,
-      y: -marginPx / 2,
-      scrollX: -window.scrollX, // include any horizontal scrolling
-      scrollY: -window.scrollY, // avoid capturing shifted viewport
-    });
+    const prevStyle = root.getAttribute("style") || "";
 
-    const imgData = canvas.toDataURL("image/png");
+    try {
+      // Force a fixed desktop-like layout during capture only
+      root.classList.add("certificate-capture-mode");
 
-    // Make the PDF page match the canvas size (plus small padding) so the
-    // certificate fills the screen on mobile without being clipped.
-    const padding = 16; // pixels of padding around the certificate
-    const orientation = canvas.width >= canvas.height ? "landscape" : "portrait";
-    const pdf = new jsPDF({
-      orientation,
-      unit: "px",
-      format: [canvas.width + padding * 2, canvas.height + padding * 2],
-    });
+      // Let the browser apply layout changes
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
-    pdf.addImage(
-      imgData,
-      "PNG",
-      padding,
-      padding,
-      canvas.width,
-      canvas.height
-    );
-    pdf.save(`certificate-${certificate.id}.pdf`);
+      const canvas = await html2canvas(root, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: "#f5f1e8",
+        scrollX: 0,
+        scrollY: 0,
+      });
+
+      const imgData = canvas.toDataURL("image/png");
+
+      // PDF page matches the fixed desktop canvas for consistent aspect ratio
+      const orientation = canvas.width >= canvas.height ? "landscape" : "portrait";
+      const pdf = new jsPDF({
+        orientation,
+        unit: "px",
+        format: [canvas.width, canvas.height],
+      });
+
+      pdf.addImage(imgData, "PNG", 0, 0, canvas.width, canvas.height);
+      pdf.save(`certificate-${certificate.id}.pdf`);
+    } finally {
+      root.classList.remove("certificate-capture-mode");
+      if (prevStyle) {
+        root.setAttribute("style", prevStyle);
+      } else {
+        root.removeAttribute("style");
+      }
+    }
   }, [certificate.id]);
 
   return (

@@ -103,21 +103,35 @@
   }
 }
 
-/* Mobile-friendly certificate preview */
-@media (max-width: 640px) {
-  .certificate-shell {
-    padding: 0.5rem;
-  }
+/* Certificate preview layout */
+.certificate-root {
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+}
 
-  .certificate-canvas {
-    max-width: 100%;
-    height: auto;
-  }
+.certificate-inner {
+  width: 100%;
+  height: auto;
+}
 
-  .certificate-canvas * {
-    word-wrap: break-word;
-    overflow-wrap: break-word;
-  }
+.certificate-root,
+.certificate-root * {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* Capture mode: force fixed desktop-like size during download only */
+.certificate-capture-mode {
+  width: 1024px !important;
+  height: 724px !important;
+  max-width: none !important;
+  max-height: none !important;
+}
+
+.certificate-capture-mode .certificate-inner {
+  width: 100%;
+  height: 100%;
 }
 
 @keyframes shake {
