@@ -107,7 +107,7 @@ const CertificatePreviewComponent = memo(function CertificatePreviewComponent({
   const CertificatePreview = () => (
     <div
       id={`certificate-${certificate.id}`}
-      className="w-full"
+      className="w-full certificate-canvas"
       style={{
         backgroundColor: "#f5f1e8",
         backgroundImage: `
@@ -245,7 +245,7 @@ const CertificatePreviewComponent = memo(function CertificatePreviewComponent({
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-4 sm:p-6 md:p-8">
           <div className="md:col-span-2">
             <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Certificate Preview</h3>
-            <div className="bg-gray-50 dark:bg-slate-800 rounded-xl overflow-hidden border border-gray-300 dark:border-gray-600">
+            <div className="bg-gray-50 dark:bg-slate-800 rounded-xl overflow-hidden border border-gray-300 dark:border-gray-600 certificate-shell">
               <CertificatePreview />
             </div>
           </div>
