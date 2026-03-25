@@ -6,6 +6,7 @@ import { Button } from "@/react-app/components/ui/button";
 import { Input } from "@/react-app/components/ui/input";
 import { Link } from "react-router";
 import ShieldMascot from "@/react-app/components/ShieldMascot";
+import { authApi } from "@/react-app/lib/api";
 
 type AuthMode = "login" | "signup";
 type UserType = "user" | "admin";
@@ -122,7 +123,6 @@ export default function Login() {
     setError("");
 
     try {
-      const { authApi } = await import("@/react-app/lib/api");
       const response = userType === "admin" 
         ? await authApi.loginAdmin({ 
             email: email.trim().toLowerCase(), 
@@ -138,7 +138,7 @@ export default function Login() {
         setTimeout(() => {
           const redirectUrl = getRedirectUrl();
           navigate(redirectUrl || (userType === "admin" ? "/admin" : "/dashboard"));
-        }, 800);
+        }, 300);
       } else {
         setError(response.error || "Invalid email or password. Please try again.");
         setIsSubmitting(false);
@@ -175,7 +175,6 @@ export default function Login() {
     setError("");
 
     try {
-      const { authApi } = await import("@/react-app/lib/api");
       const response = userType === "admin"
         ? await authApi.registerAdmin({ 
             email: email.trim().toLowerCase(), 
@@ -193,7 +192,7 @@ export default function Login() {
         setTimeout(() => {
           const redirectUrl = getRedirectUrl();
           navigate(redirectUrl || (userType === "admin" ? "/admin" : "/dashboard"));
-        }, 800);
+        }, 300);
       } else {
         setError(response.error || "Registration failed. Please try again.");
         setIsSubmitting(false);
