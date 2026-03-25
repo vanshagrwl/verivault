@@ -1,4 +1,4 @@
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation, useSearchParams } from "react-router";
 import { Lock, Mail, CheckCircle2, AlertCircle, User, UserPlus, Shield, ArrowLeft } from "lucide-react";
@@ -26,6 +26,10 @@ export default function Login() {
   const [error, setError] = useState("");
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+
+  const reduceMotion = useReducedMotion();
+  const [isMobile, setIsMobile] = useState(false);
+  const [isMascotVisible, setIsMascotVisible] = useState(false);
 
   const getRedirectUrl = () => {
     const redirect = searchParams.get("redirect");
@@ -61,15 +65,35 @@ export default function Login() {
     };
   }, []);
 
-  // Mascot eye-tracking based on mouse position
+  // Mobile detection (to disable heavy infinite background motion)
   useEffect(() => {
+    const mq = window.matchMedia("(max-width: 640px)");
+    const update = () => setIsMobile(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+
+  // Mascot shows only on large screens (lg:flex); avoid running mouse listeners on mobile.
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const update = () => setIsMascotVisible(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+
+  // Mascot eye-tracking based on mouse position (only when mascot is visible)
+  useEffect(() => {
+    if (!isMascotVisible || reduceMotion) return;
+
     const handleMouseMove = (e: MouseEvent) => {
       setMousePosition({ x: e.clientX, y: e.clientY });
     };
 
-    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mousemove", handleMouseMove, { passive: true });
     return () => window.removeEventListener("mousemove", handleMouseMove);
-  }, []);
+  }, [isMascotVisible, reduceMotion]);
 
   // Clear form when switching modes or user types
   useEffect(() => {
@@ -185,32 +209,28 @@ export default function Login() {
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 overflow-hidden relative">
       {/* Animated background elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <motion.div
-          className="absolute w-96 h-96 rounded-full bg-primary/10 blur-3xl"
-          animate={{
-            x: [0, 100, 0],
-            y: [0, 50, 0],
-          }}
-          transition={{
-            duration: 20,
-            repeat: Infinity,
-            ease: "easeInOut",
-          }}
-          style={{ top: "10%", left: "20%" }}
-        />
-        <motion.div
-          className="absolute w-96 h-96 rounded-full bg-purple-500/10 blur-3xl"
-          animate={{
-            x: [0, -100, 0],
-            y: [0, -50, 0],
-          }}
-          transition={{
-            duration: 15,
-            repeat: Infinity,
-            ease: "easeInOut",
-          }}
-          style={{ bottom: "10%", right: "20%" }}
-        />
+        {/* Keep it super fast: disable infinite motion on mobile or for reduced-motion users */}
+        {!reduceMotion && !isMobile ? (
+          <>
+            <motion.div
+              className="absolute w-96 h-96 rounded-full bg-primary/10 blur-3xl"
+              animate={{ x: [0, 100, 0], y: [0, 50, 0] }}
+              transition={{ duration: 20, repeat: Infinity, ease: "easeInOut" }}
+              style={{ top: "10%", left: "20%" }}
+            />
+            <motion.div
+              className="absolute w-96 h-96 rounded-full bg-purple-500/10 blur-3xl"
+              animate={{ x: [0, -100, 0], y: [0, -50, 0] }}
+              transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
+              style={{ bottom: "10%", right: "20%" }}
+            />
+          </>
+        ) : (
+          <>
+            <div className="absolute w-96 h-96 rounded-full bg-primary/10 blur-3xl" style={{ top: "10%", left: "20%" }} />
+            <div className="absolute w-96 h-96 rounded-full bg-purple-500/10 blur-3xl" style={{ bottom: "10%", right: "20%" }} />
+          </>
+        )}
       </div>
 
       <div className="container mx-auto px-4 py-8 min-h-screen flex items-center justify-center">

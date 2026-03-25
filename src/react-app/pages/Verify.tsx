@@ -1,4 +1,4 @@
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useState, useEffect, useRef } from "react";
 import { Search, AlertCircle, Mail, ShieldCheck, X, Clock, TrendingUp } from "lucide-react";
 import { Button } from "@/react-app/components/ui/button";
@@ -36,6 +36,9 @@ export default function Verify() {
   const searchBoxRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const reduceMotion = useReducedMotion();
+  const [isMobile, setIsMobile] = useState(false);
+
   const toErrorMessage = (err: unknown, fallback: string): string => {
     if (!err) return fallback;
     if (typeof err === "string") return err;
@@ -58,6 +61,15 @@ export default function Verify() {
         // Ignore parse errors
       }
     }
+  }, []);
+
+  // Mobile detection for disabling heavy infinite animations
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 640px)");
+    const update = () => setIsMobile(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
   }, []);
 
   // Real-time search suggestions
@@ -312,32 +324,27 @@ export default function Verify() {
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 relative overflow-hidden">
       {/* Background decorations */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <motion.div
-          className="absolute w-96 h-96 rounded-full bg-primary/10 blur-3xl"
-          animate={{
-            x: [0, 100, 0],
-            y: [0, 50, 0],
-          }}
-          transition={{
-            duration: 20,
-            repeat: Infinity,
-            ease: "easeInOut",
-          }}
-          style={{ top: "20%", left: "10%" }}
-        />
-        <motion.div
-          className="absolute w-96 h-96 rounded-full bg-purple-500/10 blur-3xl"
-          animate={{
-            x: [0, -100, 0],
-            y: [0, -50, 0],
-          }}
-          transition={{
-            duration: 15,
-            repeat: Infinity,
-            ease: "easeInOut",
-          }}
-          style={{ bottom: "20%", right: "10%" }}
-        />
+        {!reduceMotion && !isMobile ? (
+          <>
+            <motion.div
+              className="absolute w-96 h-96 rounded-full bg-primary/10 blur-3xl"
+              animate={{ x: [0, 100, 0], y: [0, 50, 0] }}
+              transition={{ duration: 20, repeat: Infinity, ease: "easeInOut" }}
+              style={{ top: "20%", left: "10%" }}
+            />
+            <motion.div
+              className="absolute w-96 h-96 rounded-full bg-purple-500/10 blur-3xl"
+              animate={{ x: [0, -100, 0], y: [0, -50, 0] }}
+              transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
+              style={{ bottom: "20%", right: "10%" }}
+            />
+          </>
+        ) : (
+          <>
+            <div className="absolute w-96 h-96 rounded-full bg-primary/10 blur-3xl" style={{ top: "20%", left: "10%" }} />
+            <div className="absolute w-96 h-96 rounded-full bg-purple-500/10 blur-3xl" style={{ bottom: "20%", right: "10%" }} />
+          </>
+        )}
       </div>
 
       {/* Header */}
@@ -410,17 +417,18 @@ export default function Verify() {
                 <div className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2">
                   <motion.div
                     animate={
-                      isFocused || isSearching
+                      !reduceMotion && !isMobile && (isFocused || isSearching)
                         ? {
                             scale: [1, 1.2, 1],
                             opacity: [1, 0.5, 1],
                           }
-                        : {}
+                        : undefined
                     }
-                    transition={{
-                      duration: 2,
-                      repeat: isFocused || isSearching ? Infinity : 0,
-                    }}
+                    transition={
+                      !reduceMotion && !isMobile && (isFocused || isSearching)
+                        ? { duration: 2, repeat: Infinity, ease: "easeInOut" }
+                        : undefined
+                    }
                   >
                     <Search className={`w-4 h-4 sm:w-5 sm:h-5 ${error ? "text-red-500" : "text-primary"}`} />
                   </motion.div>

@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, LazyMotion, domAnimation } from "framer-motion";
 import { ThemeProvider } from "@/react-app/components/ThemeProvider";
 import HomePage from "@/react-app/pages/Home";
 import Login from "@/react-app/pages/Login";
@@ -26,10 +26,12 @@ function AnimatedRoutes() {
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <Router>
-        <AnimatedRoutes />
-      </Router>
-    </ThemeProvider>
+    <LazyMotion features={domAnimation}>
+      <ThemeProvider>
+        <Router>
+          <AnimatedRoutes />
+        </Router>
+      </ThemeProvider>
+    </LazyMotion>
   );
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { Trash2, Eye, Award, Calendar, Ban, Briefcase } from "lucide-react";
 import { Button } from "./ui/button";
 import { certificatesApi } from "@/react-app/lib/api";
@@ -16,6 +16,7 @@ interface CertificateListProps {
 }
 
 export default function CertificateList({ refreshTrigger, onRefresh, certificatesOverride, isSearching = false, isAdmin = false }: CertificateListProps) {
+  const reduceMotion = useReducedMotion();
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedCert, setSelectedCert] = useState<Certificate | null>(null);
@@ -175,6 +176,15 @@ export default function CertificateList({ refreshTrigger, onRefresh, certificate
                 key={cert.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
+                whileHover={
+                  reduceMotion
+                    ? undefined
+                    : {
+                        y: -4,
+                        scale: 1.01,
+                      }
+                }
+                whileTap={reduceMotion ? undefined : { scale: 0.99 }}
                 transition={{
                   type: "spring",
                   stiffness: 400,
